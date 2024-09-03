@@ -20,16 +20,18 @@ function checkHttpResponse(fulfilledResponses: Response) {
     cacheRejectedPromises()
   tokenizeData(fulfilledResponses)
 }
+
 async function tokenizeData(settledResponses: Response) {
   const token: string = settledResponses.url.substring(settledResponses.url.lastIndexOf(`/`));
   const fixtures: JSON = await settledResponses.json();
   extractRelevantData(token, fixtures)
 }
+
 function extractRelevantData(token: string, fixtures: JSON) {
   const storedExtractedData = Object.values(fixtures).filter((fixture) =>{
     return ((fixture.HomeTeamScore && fixture.AwayTeamScore) !== null)
   }).map((fixture)=>{
-    return {
+     return {
       HomeTeam: fixture.HomeTeam,
       HomeTeamScore: fixture.HomeTeamScore, 
       AwayTeam: fixture.AwayTeam, 
@@ -38,7 +40,18 @@ function extractRelevantData(token: string, fixtures: JSON) {
   })
   writeReceivedFixturesToFile(token, storedExtractedData)
 }
-//TO-DO implement func that handles writing extract data to file
-function writeReceivedFixturesToFile(token: string, storedExtractedData: { HomeTeam: any; HomeTeamScore: any; AwayTeam: any; AwayTeamScore: any; }[]) {
-  throw new Error("Function not implemented.");
+
+async function writeReceivedFixturesToFile(token: string, storedExtractedData: { HomeTeam: string; HomeTeamScore: number; AwayTeam: string; AwayTeamScore: number; }[]) {
+  const {start, end} = subStringTokenToDirName(token)
+  const filepath = `./data${token.substring(start, end)}${token.substring(start)}.json`
+  using file = await Deno.open(filepath, {write:true, create:true})
+  const encoder = new TextEncoder().encode(JSON.stringify(storedExtractedData))
+  const writer = file.writable.getWriter()
+  await writer.write(encoder)
+}
+
+function subStringTokenToDirName(token: string): { start: number; end: number; } {
+  const start = token.indexOf("/");
+  const end = token.lastIndexOf("-");
+  return { start, end };
 }

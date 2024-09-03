@@ -6,7 +6,6 @@ async function fetchDataFromWeb(urls: Promise<Response>[]){
         cacheRejectedPromises()
       else checkHttpResponse(response.value)
     }
-    
   } catch (_) {
     // ignore
   }
@@ -18,6 +17,12 @@ function cacheRejectedPromises() {
 }
 
 //TO-DO check http response for fetch request
-function checkHttpResponse(value: Response) {
+function checkHttpResponse(fulfilledResponses: Response) {
+  if(fulfilledResponses.status !== 200|| !fulfilledResponses.headers.get("content-type")?.includes("application/json"))
+    cacheRejectedPromises()
+  tokenizeData(fulfilledResponses)
+}
+//TO-DO extract 'token' get the league and parse response body body text into json
+function tokenizeData(fulfilledResponses: Response) {
   throw new Error("Function not implemented.");
 }

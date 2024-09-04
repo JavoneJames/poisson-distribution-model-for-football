@@ -42,12 +42,16 @@ function extractRelevantData(token: string, fixtures: JSON) {
 }
 
 async function writeReceivedFixturesToFile(token: string, storedExtractedData: { HomeTeam: string; HomeTeamScore: number; AwayTeam: string; AwayTeamScore: number; }[]) {
-  const {start, end} = subStringTokenToDirName(token)
-  const filepath = `./data${token.substring(start, end)}${token.substring(start)}.json`
+  const filepath = getFilePath(token);
   using file = await Deno.open(filepath, {write:true, create:true})
   const encoder = new TextEncoder().encode(JSON.stringify(storedExtractedData))
   const writer = file.writable.getWriter()
   await writer.write(encoder)
+}
+
+function getFilePath(token: string) {
+  const { start, end } = subStringTokenToDirName(token);
+  return `./data${token.substring(start, end)}${token.substring(start)}.json`;
 }
 
 function subStringTokenToDirName(token: string): { start: number; end: number; } {

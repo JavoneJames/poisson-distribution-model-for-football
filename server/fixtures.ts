@@ -20,7 +20,7 @@ function loggingHandler(reason: string): void {
 
 function checkHttpResponse(fulfilledResponses: Response): void {
   if (fulfilledResponses.status !== 200 || !fulfilledResponses.headers.get("content-type")?.includes("application/json"))
-    return loggingHandler(`ERROR unable to access: ${fulfilledResponses.url}\n`)
+    return loggingHandler(`ERROR status(${fulfilledResponses.status}) unable to access: ${fulfilledResponses.url}\n`)
   parseData(fulfilledResponses)
 }
 

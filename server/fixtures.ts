@@ -1,23 +1,25 @@
 export async function fetchDataFromWeb(urls: Promise<Response>[]){
   try {
     const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(urls)
-    for (const response of responses){
-      if(response.status === "rejected")
-        cacheRejectedPromises()
-      else checkHttpResponse(response.value)
-    }
-  } catch (_) {
-    // ignore
+    for await(const response of responses)
+      if (response.status === "fulfilled")
+        checkHttpResponse(response.value)
+  } catch (error) {
+    loggingHandler(error)
   }
 }
-//TO-DO store rejected promises then output to log file
-function cacheRejectedPromises() {
-  throw new Error("Function not implemented.");
+
+function loggingHandler(reason: string) {
+  Deno.writeTextFileSync(`${Deno.env.get("logfile")}`, reason, {create:true, append:true})
 }
-//TO-DO output non-200 responses to log file
+
 function checkHttpResponse(fulfilledResponses: Response) {
-  if(fulfilledResponses.status !== 200 || !fulfilledResponses.headers.get("content-type")?.includes("application/json"))
-    cacheRejectedPromises()
+  if (fulfilledResponses.status !== 200 || !fulfilledResponses.headers.get("content-type")?.includes("application/json"))
+    return loggingHandler(`${new Date().toLocaleString("en-GB",
+  {
+    dateStyle: "short",
+    timeStyle: "medium"
+  })} ERROR unable to access: ${fulfilledResponses.url}\n`)
   tokenizeData(fulfilledResponses)
 }
 
@@ -28,9 +30,11 @@ async function tokenizeData(settledResponses: Response) {
 }
 
 function extractRelevantData(token: string, fixtures: JSON) {
-  const storedExtractedData = Object.values(fixtures).filter((fixture) =>{
+  const storedExtractedData = Object.values(fixtures)
+  .filter((fixture) =>{
     return ((fixture.HomeTeamScore && fixture.AwayTeamScore) !== null)
-  }).map((fixture)=>{
+  })
+  .map((fixture)=>{
      return {
       HomeTeam: fixture.HomeTeam,
       HomeTeamScore: fixture.HomeTeamScore, 

@@ -3,7 +3,7 @@ const options = {
     timeStyle: "medium"
 }as const
 
-export async function fetchDataFromWeb(urls: Promise<Response>[]){
+export async function fetchDataFromWeb(urls: Promise<Response>[]): Promise<void>{
   try {
     const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(urls)
     for await(const response of responses)
@@ -14,17 +14,17 @@ export async function fetchDataFromWeb(urls: Promise<Response>[]){
   }
 }
 
-function loggingHandler(reason: string) {
+function loggingHandler(reason: string): void {
   Deno.writeTextFileSync(`${Deno.env.get("logfile")}`, `${new Date().toLocaleString("en-GB", options)} ${reason}`, {create:true, append:true})
 }
 
-function checkHttpResponse(fulfilledResponses: Response) {
+function checkHttpResponse(fulfilledResponses: Response): void {
   if (fulfilledResponses.status !== 200 || !fulfilledResponses.headers.get("content-type")?.includes("application/json"))
     return loggingHandler(`ERROR unable to access: ${fulfilledResponses.url}\n`)
   parseData(fulfilledResponses)
 }
 
-async function parseData(settledResponses: Response) {
+async function parseData(settledResponses: Response): Promise<void> {
   const token: string = settledResponses.url.substring(settledResponses.url.lastIndexOf(`/`));
   await settledResponses.json()
   .then((fixtures)=>{
@@ -35,7 +35,7 @@ async function parseData(settledResponses: Response) {
   })
 }
 
-function extractRelevantData(token: string, fixtures: Promise<JSON>) {
+function extractRelevantData(token: string, fixtures: Promise<JSON>): void {
   const storedExtractedData = Object.values(fixtures)
   .filter((fixture)=>{
     return ((fixture.HomeTeamScore && fixture.AwayTeamScore) !== null)
@@ -51,7 +51,7 @@ function extractRelevantData(token: string, fixtures: Promise<JSON>) {
   writeReceivedFixturesToFile(token, storedExtractedData)
 }
 
-async function writeReceivedFixturesToFile(token: string, storedExtractedData: { HomeTeam: string; HomeTeamScore: number; AwayTeam: string; AwayTeamScore: number; }[]) {
+async function writeReceivedFixturesToFile(token: string, storedExtractedData: { HomeTeam: string; HomeTeamScore: number; AwayTeam: string; AwayTeamScore: number; }[]): Promise<void> {
   const filepath = getFilePath(token);
   using file = await Deno.open(filepath, {write:true, create:true})
   const encoder = new TextEncoder().encode(JSON.stringify(storedExtractedData))
@@ -59,7 +59,7 @@ async function writeReceivedFixturesToFile(token: string, storedExtractedData: {
   await writer.write(encoder)
 }
 
-function getFilePath(token: string) {
+function getFilePath(token: string): string {
   const { start, end } = subStringTokenToDirName(token);
   return `./data${token.substring(start, end)}${token.substring(start)}.json`;
 }

@@ -1,37 +1,43 @@
+const options = {
+    dateStyle:"short",
+    timeStyle: "medium"
+}as const
+
 export async function fetchDataFromWeb(urls: Promise<Response>[]){
   try {
     const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(urls)
     for await(const response of responses)
       if (response.status === "fulfilled")
         checkHttpResponse(response.value)
-  } catch (error) {
-    loggingHandler(error)
+  } catch (_) {
+    loggingHandler('FATAL unexpected error in func fetchDataFromWeb')
   }
 }
 
 function loggingHandler(reason: string) {
-  Deno.writeTextFileSync(`${Deno.env.get("logfile")}`, reason, {create:true, append:true})
+  Deno.writeTextFileSync(`${Deno.env.get("logfile")}`, `${new Date().toLocaleString("en-GB", options)} ${reason}`, {create:true, append:true})
 }
 
 function checkHttpResponse(fulfilledResponses: Response) {
   if (fulfilledResponses.status !== 200 || !fulfilledResponses.headers.get("content-type")?.includes("application/json"))
-    return loggingHandler(`${new Date().toLocaleString("en-GB",
-  {
-    dateStyle: "short",
-    timeStyle: "medium"
-  })} ERROR unable to access: ${fulfilledResponses.url}\n`)
-  tokenizeData(fulfilledResponses)
+    return loggingHandler(`ERROR unable to access: ${fulfilledResponses.url}\n`)
+  parseData(fulfilledResponses)
 }
 
-async function tokenizeData(settledResponses: Response) {
+async function parseData(settledResponses: Response) {
   const token: string = settledResponses.url.substring(settledResponses.url.lastIndexOf(`/`));
-  const fixtures: JSON = await settledResponses.json();
-  extractRelevantData(token, fixtures)
+  await settledResponses.json()
+  .then((fixtures)=>{
+    extractRelevantData(token, fixtures)
+  })
+  .catch(()=>{
+    return loggingHandler(`ERROR unable to read content body from: ${settledResponses.url}\n`)
+  })
 }
 
-function extractRelevantData(token: string, fixtures: JSON) {
+function extractRelevantData(token: string, fixtures: Promise<JSON>) {
   const storedExtractedData = Object.values(fixtures)
-  .filter((fixture) =>{
+  .filter((fixture)=>{
     return ((fixture.HomeTeamScore && fixture.AwayTeamScore) !== null)
   })
   .map((fixture)=>{

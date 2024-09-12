@@ -7,20 +7,23 @@ function readDataFromFile(): void {
 function differentiateMatchResults(data: JSON) {
   Object.values(data).map((fixture)=>{
     if(fixture.HomeTeamScore > fixture.AwayTeamScore)
-      homeStandings(fixture.HomeTeam)
+      homeStandings(fixture.HomeTeam, fixture.HomeTeamScore, fixture.AwayTeamScore)
     else if (fixture.HomeTeamScore < fixture.AwayTeamScore)
       awayStandings(fixture.AwayTeam)
-    else console.log("TO-DO add drawn games to home and away standings");
-    
+    else return
   })
 }
-
-function homeStandings(temp: string) {
-  console.log(`Home win ${temp}`);
+const storeHomeStanding: Map<string, object> = new Map();
+function homeStandings(HomeTeam: string, HomeTeamScore: number, AwayTeamScore: number) {
+  const temp = new Set()
+  if(!storeHomeStanding.has(HomeTeam)){
+    storeHomeStanding.set(HomeTeam, temp.add([1,1,0,0,HomeTeamScore,AwayTeamScore,HomeTeamScore-AwayTeamScore,3]))
+  }
+  console.log(storeHomeStanding);
 }
 
 function awayStandings(temp: string) {
-  console.log(`Away win ${temp}`);
+  //console.log(`Away win ${temp}`);
 }
 
 readDataFromFile();

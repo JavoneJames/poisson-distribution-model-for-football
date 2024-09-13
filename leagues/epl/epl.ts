@@ -16,12 +16,16 @@ function differentiateMatchResults(data: JSON) {
 const storeHomeStanding: Map<string, object> = new Map();
 const storeAwayStanding: Map<string, object> = new Map();
 
-function homeStandings(HomeTeam: string, HomeTeamScore: number, AwayTeamScore: number) {
-  if (!storeHomeStanding.has(HomeTeam))
-    return storeHomeStanding.set(HomeTeam,insertMatchResults(HomeTeamScore, AwayTeamScore));
-  const results = Object(storeHomeStanding.get(HomeTeam)).values();
-  for(const result of results)
-    return result.GP += 1, result.W += 1, result.GF += HomeTeamScore, result.GA += AwayTeamScore, result.GD += HomeTeamScore - AwayTeamScore, result.Pts += 3
+function homeStandings(homeTeam: string, homeTeamScore: number, awayTeamScore: number) {
+  if (!storeHomeStanding.has(homeTeam))
+    return storeHomeStanding.set(homeTeam,insertMatchResults(homeTeamScore, awayTeamScore));
+  return updateMatchResults(homeTeam, homeTeamScore, awayTeamScore);
+}
+
+function updateMatchResults(teamName: string, homeTeamScore: number, awayTeamScore: number) {
+  const results = Object(storeHomeStanding.get(teamName)).values();
+  for (const result of results)
+    return result.GP += 1, result.W += 1, result.GF += homeTeamScore, result.GA += awayTeamScore, result.GD += homeTeamScore - awayTeamScore, result.Pts += 3;
 }
 
 function insertMatchResults(goalFor: number, goalAgainst: number): object {

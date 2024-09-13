@@ -14,12 +14,30 @@ function differentiateMatchResults(data: JSON) {
   })
 }
 const storeHomeStanding: Map<string, object> = new Map();
+const storeAwayStanding: Map<string, object> = new Map();
+// const storeHomeStanding = {HomeStandings:{}};
+
 function homeStandings(HomeTeam: string, HomeTeamScore: number, AwayTeamScore: number) {
-  const temp = new Set()
-  if(!storeHomeStanding.has(HomeTeam)){
-    storeHomeStanding.set(HomeTeam, temp.add([1,1,0,0,HomeTeamScore,AwayTeamScore,HomeTeamScore-AwayTeamScore,3]))
+  if (!storeHomeStanding.has(HomeTeam))
+    return storeHomeStanding.set(HomeTeam,insertMatchResults(HomeTeamScore, AwayTeamScore));
+  if(storeHomeStanding.has(HomeTeam)){
+    const temp = storeHomeStanding.get(HomeTeam);
+    for(const value of Object.values(temp))
+      return value.GP += 1, value.W += 1, value.GF += HomeTeamScore, value.GA += AwayTeamScore, value.GD += HomeTeamScore - AwayTeamScore, value.Pts += 3
   }
-  console.log(storeHomeStanding);
+}
+
+function insertMatchResults(HomeTeamScore: number, AwayTeamScore: number): object {
+  return [{
+    GP: 1,
+    W: 1,
+    D: 0,
+    L: 0,
+    GF: HomeTeamScore,
+    GA: AwayTeamScore,
+    GD: HomeTeamScore - AwayTeamScore,
+    Pts: 3
+  }];
 }
 
 function awayStandings(temp: string) {
@@ -27,3 +45,4 @@ function awayStandings(temp: string) {
 }
 
 readDataFromFile();
+console.log(storeHomeStanding);

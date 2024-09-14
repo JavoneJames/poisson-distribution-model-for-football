@@ -3,7 +3,7 @@ type Fixture = {
   AwayTeam: string
   HomeTeamScore: number
   AwayTeamScore: number
-};
+}
 
 type Standing = {
   GP: number  // Games Played
@@ -14,7 +14,7 @@ type Standing = {
   GA: number  // Goals Against
   GD: number  // Goal Difference
   Pts: number // Points
-};
+}
 
 type Outcome = 'win' | 'loss' | 'draw'
 

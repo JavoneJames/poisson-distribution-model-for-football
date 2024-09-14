@@ -1,60 +1,84 @@
+type Fixture = {
+  HomeTeam: string
+  AwayTeam: string
+  HomeTeamScore: number
+  AwayTeamScore: number
+};
+
+type Standing = {
+  GP: number  // Games Played
+  W: number   // Wins
+  D: number   // Draws
+  L: number   // Losses
+  GF: number  // Goals For
+  GA: number  // Goals Against
+  GD: number  // Goal Difference
+  Pts: number // Points
+};
+
+type Outcome = 'win' | 'loss' | 'draw'
+
+// Store standings for home and away teams
+const storeHomeStanding: Map<string, Standing> = new Map()
+const storeAwayStanding: Map<string, Standing> = new Map()
+
 function readDataFromFile(): void {
-  const fileContent: string = Deno.readTextFileSync(`${Deno.env.get("READ_EPL_2024")}`);
-  const parseToJSON: JSON = JSON.parse(fileContent)
-  differentiateMatchResults(parseToJSON)
+  const filePath = Deno.env.get("READ_EPL_2024")
+  if (!filePath) throw new Error("File path not found in environment variable.")
+  const fileContent = Deno.readTextFileSync(filePath)
+  const fixtures: Fixture[] = JSON.parse(fileContent)
+  fixtures.forEach(processFixtureResults)
 }
 
-function differentiateMatchResults(data: JSON) {
-  Object.values(data).map((fixture)=>{
-    if(fixture.HomeTeamScore > fixture.AwayTeamScore)
-      homeStandings(fixture.HomeTeam, fixture.HomeTeamScore, fixture.AwayTeamScore)
-    else if (fixture.HomeTeamScore < fixture.AwayTeamScore)
-      awayStandings(fixture.AwayTeam, fixture.AwayTeamScore, fixture.HomeTeamScore)
-    //else return
-  })
+function processFixtureResults(fixture: Fixture): void {
+  updateTeamStanding(storeHomeStanding, fixture.HomeTeam, fixture.HomeTeamScore, fixture.AwayTeamScore)
+  updateTeamStanding(storeAwayStanding, fixture.AwayTeam, fixture.AwayTeamScore, fixture.HomeTeamScore)
 }
-const storeHomeStanding: Map<string, object> = new Map();
-const storeAwayStanding: Map<string, object> = new Map();
 
-function homeStandings(homeTeam: string, homeTeamScore: number, awayTeamScore: number) {
-  if (!storeHomeStanding.has(homeTeam))
-    storeHomeStanding.set(homeTeam,insertMatchResults(homeTeamScore, awayTeamScore));
-  else{
-    const results = Object(storeHomeStanding.get(homeTeam)).values();
-    updateMatchResults(results, homeTeamScore, awayTeamScore);
+function updateTeamStanding(standings: Map<string, Standing>, team: string, teamScore: number, opponentScore: number): void {
+  const doesTeamExists = standings.get(team)
+  const outcome = determineOutcome(teamScore, opponentScore)
+  if (doesTeamExists) updateExistingStanding(doesTeamExists, teamScore, opponentScore, outcome)
+  else standings.set(team, createNewStanding(teamScore, opponentScore, outcome))
+}
+
+
+function determineOutcome(score1: number, score2: number): Outcome {
+  if (score1 > score2) return 'win'
+  if (score1 < score2) return 'loss'
+  return 'draw'
+}
+
+function createNewStanding(teamScore: number, opponentScore: number, outcome: Outcome): Standing {
+  return {
+    GP: 1,
+    W: outcome === 'win' ? 1 : 0,
+    D: outcome === 'draw' ? 1 : 0,
+    L: outcome === 'loss' ? 1 : 0,
+    GF: teamScore,
+    GA: opponentScore,
+    GD: teamScore - opponentScore,
+    Pts: outcome === 'win' ? 3 : outcome === 'draw' ? 1 : 0,
+  };
+}
+
+function updateExistingStanding(team: Standing, teamScore: number, opponentScore: number, outcome: Outcome): void {
+  team.GP += 1
+  team.GF += teamScore
+  team.GA += opponentScore
+  team.GD += teamScore - opponentScore
+
+  if (outcome === 'win') {
+    team.W += 1
+    team.Pts += 3
+  } else if (outcome === 'draw') {
+    team.D += 1
+    team.Pts += 1
+  } else if (outcome === 'loss') {
+    team.L += 1
   }
 }
 
-function awayStandings(awayTeam: string, awayTeamScore: number, homeTeamScore: number) {
-  if (!storeAwayStanding.has(awayTeam))
-    storeAwayStanding.set(awayTeam,insertMatchResults(awayTeamScore, homeTeamScore));
-  else{
-    const results = Object(storeAwayStanding.get(awayTeam)).values();
-    updateMatchResults(results, awayTeamScore, homeTeamScore);
-  }
-}
-
-function insertMatchResults(goalFor: number, goalAgainst: number): object {
-  return [
-    {
-      GP: 1,
-      W: 1,
-      D: 0,
-      L: 0,
-      GF: goalFor,
-      GA: goalAgainst,
-      GD: goalFor - goalAgainst,
-      Pts: 3,
-    },
-  ];
-}
-
-// deno-lint-ignore no-explicit-any
-function updateMatchResults(results: any, homeTeamScore: number, awayTeamScore: number) {
-  for (const result of results)
-    return result.GP += 1, result.W += 1, result.GF += homeTeamScore, result.GA += awayTeamScore, result.GD += homeTeamScore - awayTeamScore, result.Pts += 3;
-}
-
-readDataFromFile();
-console.log(storeHomeStanding);
-console.log(storeAwayStanding);
+readDataFromFile()
+console.log(storeHomeStanding)
+console.log(storeAwayStanding)

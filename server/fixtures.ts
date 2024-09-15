@@ -1,13 +1,14 @@
-import { temp } from "./datatypes.ts";
+import { SIGNAL, ParsedJsonFromWeb } from "./datatypes.ts";
 
 const options = {
     dateStyle:"short",
     timeStyle: "medium"
 }as const
 
-export async function fetchDataFromWeb(urls: Promise<Response>[]): Promise<void>{
+export async function fetchDataFromWeb(urls: string[]): Promise<void>{
   try {
-    const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(urls)
+    const fetchPromises = urls.map((url) => fetch(url, { signal: SIGNAL }))
+    const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(fetchPromises)
     for (const response of responses)
       if (response.status === "fulfilled")
         checkHttpResponse(response.value)
@@ -52,7 +53,7 @@ function extractRelevantData(token: string, fixtures: ParsedJsonFromWeb): void {
   writeReceivedFixturesToFile(token, extractedData)
 }
 
-async function writeReceivedFixturesToFile(token: string, extractedData: { HomeTeam: string; HomeTeamScore: number; AwayTeam: string; AwayTeamScore: number; }[]): Promise<void> {
+async function writeReceivedFixturesToFile(token: string, extractedData: { HomeTeam: string; HomeTeamScore: number | null; AwayTeam: string; AwayTeamScore: number | null; }[]): Promise<void> {
   const filepath = getFilePath(token);
   using file = await Deno.open(filepath, {write:true, create:true})
   const encoder = new TextEncoder().encode(JSON.stringify(extractedData))
@@ -72,5 +73,5 @@ function subStringTokenToDirName(token: string): { start: number; end: number; }
 }
 
 fetchDataFromWeb([
-  fetch(`${Deno.env.get("FETCH_EPL_2024")}`, { signal: temp }),
-]);
+  `${Deno.env.get("FETCH_EPL_2024")}`
+])

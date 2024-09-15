@@ -20,12 +20,9 @@ const SIGNAL: AbortSignal = AbortSignal.timeout(5000);
  */
 export async function fetchDataFromWeb(urls: string[]): Promise<void> {
   try {
-    // Map each URL to a fetch promise, applying the timeout signal.
     const fetchPromises = urls.map((url) => fetch(url, { signal: SIGNAL }));
-    // Wait for all fetch promises to settle (fulfill or reject).
     const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(fetchPromises);
     for (const response of responses) {
-      // Check if the response was successful and handle it accordingly.
       if (response.status === "fulfilled") {
         checkHttpResponse(response.value);
       }

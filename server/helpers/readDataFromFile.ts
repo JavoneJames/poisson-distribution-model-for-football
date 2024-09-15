@@ -14,8 +14,8 @@ import {LeagueData } from "../types/datatypes.d.ts";
  * @throws Will throw an error if the file path is not set in the environment 
  *         variable or if there are issues reading or parsing the file.
  */
-export function readDataFromFile(): LeagueData {
-  const filePath = Deno.env.get("READ_EPL_2024");
+export function readDataFromFile(filePath: string): LeagueData {
+  
   if (!filePath) throw new Error("File path not found in environment variable.");
   try {
     const fileContent = Deno.readTextFileSync(filePath);

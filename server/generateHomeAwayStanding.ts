@@ -15,7 +15,7 @@ const storeAwayStanding: Map<string, Standing> = new Map();
  * After processing, the standings are written to local files.
  */
   async function processFixtures(): Promise<void> {
-    const data = readDataFromFile() as LeagueData;
+    const data = readDataFromFile(Deno.env.get("READ_EPL_2024")!) as LeagueData;
     const leagueEntries = Object.entries(data); 
 
     for (const [league, fixtures] of leagueEntries) {
@@ -34,8 +34,8 @@ function updateStandings(fixtures: Fixture[]): void {
 
 // Write the standings to local files
 async function writeStandingsToFile(league: string): Promise<void> {
-  await writeLocalData(league, "homestanding", storeHomeStanding);
-  await writeLocalData(league, "awaystanding", storeAwayStanding);
+  await writeLocalData(league, "homeStanding", storeHomeStanding);
+  await writeLocalData(league, "awayStanding", storeAwayStanding);
 }
 
 /**

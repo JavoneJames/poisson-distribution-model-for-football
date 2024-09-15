@@ -8,7 +8,7 @@ const OPTIONS = {
 export function loggingHandler(reason: string): void {
   const timestamp = new Date().toLocaleString("en-GB", OPTIONS);
   const logMessage = `${timestamp} - ${reason}\n`;
-  const logfilePath = Deno.env.get("logfile");
+  const logfilePath = Deno.env.get("LOG_FILE");
   if (!logfilePath) throw new Error("File path not found in environment variable.");
   Deno.writeTextFileSync(logfilePath, logMessage, { create: true, append: true });
 }

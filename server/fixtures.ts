@@ -32,24 +32,23 @@ function checkHttpResponse(fulfilledResponses: Response): void {
 
 async function parseData(settledResponses: Response): Promise<void> {
   const token: string = settledResponses.url.substring(settledResponses.url.lastIndexOf(`/`));
-  await settledResponses.json()
-  .then((fixtures)=>{
-    extractRelevantData(token, fixtures)
-  })
-  .catch(()=>{
-    return loggingHandler(`ERROR unable to read content body from: ${settledResponses.url}\n`)
-  })
+  try {
+    const fixtures: ParsedJsonFromWeb = await settledResponses.json();
+    extractRelevantData(token, fixtures);
+  } catch (err) {
+    loggingHandler(`ERROR: Unable to read content body from: ${settledResponses.url} - ${err.message}`);
+  }
 }
 
-function extractRelevantData(token: string, fixtures: any[]): void {
+function extractRelevantData(token: string, fixtures: ParsedJsonFromWeb): void {
   const extractedData = fixtures
-  .filter((fixture)=>((fixture.HomeTeamScore && fixture.AwayTeamScore) !== null))
-  .map((fixture)=>({
+  .filter((fixture) => (fixture.HomeTeamScore && fixture.AwayTeamScore) != null)
+  .map((fixture) => ({
       HomeTeam: fixture.HomeTeam,
-      HomeTeamScore: fixture.HomeTeamScore, 
-      AwayTeam: fixture.AwayTeam, 
-      AwayTeamScore: fixture.AwayTeamScore
-  }))
+      HomeTeamScore: fixture.HomeTeamScore,
+      AwayTeam: fixture.AwayTeam,
+      AwayTeamScore: fixture.AwayTeamScore,
+  }));
   writeReceivedFixturesToFile(token, extractedData)
 }
 

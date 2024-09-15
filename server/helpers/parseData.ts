@@ -1,6 +1,6 @@
 import { loggingHandler } from "./loggingHandler.ts";
 import { ParsedJsonFromWeb } from "../types/datatypes.d.ts";
-import { writeWebData } from "./utilities.ts";
+import { writeWebData } from "./writeDataToFile.ts";
 
 // Exported asynchronous function to parse data from a settled response.
 export async function parseData(settledResponses: Response): Promise<void> {

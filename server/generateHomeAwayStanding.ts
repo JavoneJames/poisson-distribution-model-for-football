@@ -1,6 +1,6 @@
-import { writeLocalData } from "./helpers/utilities.ts";
-import { readDataFromFile } from "./readDataFromFile.ts";
-import {Standing, Outcome } from "./types/datatypes.d.ts"
+import { writeLocalData } from "./helpers/writeDataToFile.ts";
+import { readDataFromFile } from "./helpers/readDataFromFile.ts";
+import {Standing, Outcome, Fixture, LeagueData } from "./types/datatypes.d.ts"
 
 // Store standings for home teams and away teams
 const storeHomeStanding: Map<string, Standing> = new Map();
@@ -15,7 +15,7 @@ const storeAwayStanding: Map<string, Standing> = new Map();
  * After processing, the standings are written to local files.
  */
   async function processFixtures(): Promise<void> {
-    const data = readDataFromFile();
+    const data = readDataFromFile() as LeagueData;
     const leagueEntries = Object.entries(data); 
 
     for (const [league, fixtures] of leagueEntries) {
@@ -25,7 +25,7 @@ const storeAwayStanding: Map<string, Standing> = new Map();
   }
 
 // Update the standings for home and away teams
-function updateStandings(fixtures: Array<{ HomeTeam: string; HomeTeamScore: number; AwayTeam: string; AwayTeamScore: number; }>): void {
+function updateStandings(fixtures: Fixture[]): void {
   fixtures.forEach(fixture => {
     updateTeamStanding(storeHomeStanding, fixture.HomeTeam, fixture.HomeTeamScore, fixture.AwayTeamScore);
     updateTeamStanding(storeAwayStanding, fixture.AwayTeam, fixture.AwayTeamScore, fixture.HomeTeamScore);

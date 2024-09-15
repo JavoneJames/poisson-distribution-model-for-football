@@ -1,5 +1,5 @@
 import { loggingHandler } from "./helpers/loggingHandler.ts";
-import { Fixture } from "./types/datatypes.d.ts";
+import {LeagueData } from "./types/datatypes.d.ts";
 
 /**
  * Reads and parses fixture data from a specified file.
@@ -14,14 +14,22 @@ import { Fixture } from "./types/datatypes.d.ts";
  * @throws Will throw an error if the file path is not set in the environment 
  *         variable or if there are issues reading or parsing the file.
  */
-export function readDataFromFile(): Fixture[] {
+export function readDataFromFile(): LeagueData {
   const filePath = Deno.env.get("READ_EPL_2024");
   if (!filePath) throw new Error("File path not found in environment variable.");
   try {
     const fileContent = Deno.readTextFileSync(filePath);
-    return JSON.parse(fileContent) as Fixture[];
+    const data = JSON.parse(fileContent) as LeagueData;
+    if (isEmpty(data)) {
+      throw new Error("Parsed data is empty.");
+    }
+    return data
   } catch (err) {
     loggingHandler(`Failed to read or parse file: ${err.message}`);
     Deno.exit(1)
   }
 }
+
+const isEmpty = (data: { [s: string]: unknown; } | ArrayLike<unknown>): boolean => {
+  return Object.keys(data).length === 0;
+};

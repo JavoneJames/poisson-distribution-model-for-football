@@ -18,11 +18,16 @@ export type ParsedJsonFromWeb = {
 }[];
 
 // Type representing a fixture that contains details about a specific match between two teams.
-export type Fixture = {
+type Fixture = {
   HomeTeam: string                   
   AwayTeam: string                   
   HomeTeamScore: number              
   AwayTeamScore: number             
+}
+
+// Define the type for the league object with Fixture as its signature
+export type LeagueData = {
+  [leagueKey: string]: Fixture[];
 }
 
 // Type representing the standings of a team in the league.

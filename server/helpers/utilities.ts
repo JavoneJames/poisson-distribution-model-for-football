@@ -23,20 +23,20 @@ function serializeData(data: Map<string, Standing> | ExtractedObject) {
   return JSON.stringify(data);
 }
 
-function getFilePathFromToken(token: string): string {
-  return `./server/data/${token}.json`;
-}
-
-export async function writeLocalData(league:string, filename: string, data: Map<string, Standing>): Promise<void> {
-  const filepath = getLocalFilePath(league, filename);
-  await writeDataToFile(filepath, data);
-}
-
 export async function writeWebData(token: string, data: ExtractedObject): Promise<void> {
   const filepath = getFilePathFromToken(token);
   await writeDataToFile(filepath, data);
 }
 
-function getLocalFilePath(league:string, filename: string): string {
-  return `./server/data//${league}/${filename}.json`;
+function getFilePathFromToken(token: string): string {
+  return `./server/data/${token}.json`;
+}
+
+export async function writeLocalData(league: string | null, filename: string, data: Map<string, Standing>): Promise<void> {
+  const filepath = getLocalFilePath(league, filename);
+  await writeDataToFile(filepath, data);
+}
+
+function getLocalFilePath(league: string | null, filename: string): string {
+  return `./server/data/${league}-${filename}.json`;
 }

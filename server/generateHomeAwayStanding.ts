@@ -1,6 +1,6 @@
 import { writeLocalData } from "./helpers/utilities.ts";
 import { readDataFromFile } from "./readDataFromFile.ts";
-import {Fixture, Standing, Outcome } from "./types/datatypes.d.ts"
+import {Standing, Outcome } from "./types/datatypes.d.ts"
 
 // Store standings for home teams and away teams
 const storeHomeStanding: Map<string, Standing> = new Map();
@@ -14,15 +14,28 @@ const storeAwayStanding: Map<string, Standing> = new Map();
  * scores
  * After processing, the standings are written to local files.
  */
-async function processFixtures(): Promise<void> {
-  const fixtures: Fixture[] = readDataFromFile();
-  if (fixtures.length === 0) return
-  fixtures.forEach(({ HomeTeam, HomeTeamScore, AwayTeam, AwayTeamScore }) => {
-    updateTeamStanding(storeHomeStanding, HomeTeam, HomeTeamScore, AwayTeamScore);
-    updateTeamStanding(storeAwayStanding, AwayTeam, AwayTeamScore, HomeTeamScore);
+  async function processFixtures(): Promise<void> {
+    const data = readDataFromFile();
+    const leagueEntries = Object.entries(data); 
+
+    for (const [league, fixtures] of leagueEntries) {
+      updateStandings(fixtures);
+      await writeStandingsToFile(league);
+    }
+  }
+
+// Update the standings for home and away teams
+function updateStandings(fixtures: Array<{ HomeTeam: string; HomeTeamScore: number; AwayTeam: string; AwayTeamScore: number; }>): void {
+  fixtures.forEach(fixture => {
+    updateTeamStanding(storeHomeStanding, fixture.HomeTeam, fixture.HomeTeamScore, fixture.AwayTeamScore);
+    updateTeamStanding(storeAwayStanding, fixture.AwayTeam, fixture.AwayTeamScore, fixture.HomeTeamScore);
   });
-  await writeLocalData("epl","homestanding", storeHomeStanding)
-  await writeLocalData("epl","awaystanding", storeAwayStanding)
+}
+
+// Write the standings to local files
+async function writeStandingsToFile(league: string): Promise<void> {
+  await writeLocalData(league, "homestanding", storeHomeStanding);
+  await writeLocalData(league, "awaystanding", storeAwayStanding);
 }
 
 /**
@@ -111,4 +124,3 @@ function updateExistingStanding(team: Standing, teamScore: number, opponentScore
 }
 
 await processFixtures()
-export { storeHomeStanding, storeAwayStanding };

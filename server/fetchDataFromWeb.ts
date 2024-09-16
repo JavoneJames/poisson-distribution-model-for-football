@@ -3,33 +3,43 @@ import { loggingHandler } from "./helpers/loggingHandler.ts";
 
 // Define a timeout signal for fetch requests, set to 5000 milliseconds (5 seconds).
 const SIGNAL: AbortSignal = AbortSignal.timeout(5000);
+const HTTP_OK = 200;
+const CONTENT_TYPE_JSON = "application/json";
 
 /**
- * Fetches data from an array of URLs concurrently.
+ * Fetches data from a list of URLs concurrently and processes successful responses.
+ *
+ * This function accepts an array of URLs, performs HTTP GET requests concurrently for each URL,
+ * and checks the HTTP response for each fulfilled request. It uses `Promise.allSettled` to ensure 
+ * that all requests complete, regardless of whether they succeed or fail.
+ *
+ * @async
+ * @function
+ * @param {string[]} urls - An array of URLs to fetch data from.
+ * @returns {Promise<void>} - A promise that resolves when all fetch operations are settled.
  * 
- * This asynchronous function takes an array of URL strings and attempts to 
- * fetch data from each URL. It uses the AbortSignal to cancel requests 
- * that take longer than the specified timeout. The function processes 
- * the responses, checking each for success or failure.
- * 
- * @param urls - An array of strings representing the URLs to fetch data from.
- * @returns A Promise that resolves when all fetch requests have completed, 
- *          whether successfully or not.
- * @throws Will log an error message if an unexpected error occurs during 
- *         the fetching process.
+ * @throws {Error} If an unexpected error occurs during the fetch process.
  */
 export async function fetchDataFromWeb(urls: string[]): Promise<void> {
   try {
-    const fetchPromises = urls.map((url) => fetch(url, { signal: SIGNAL }));
+    const fetchPromises: Promise<Response>[] = urls.map((url) => fetch(url, { signal: SIGNAL }));
     const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(fetchPromises);
-    for (const response of responses) {
-      if (response.status === "fulfilled") {
-        checkHttpResponse(response.value);
-      }
-    }
+    handleResponses(responses);
   } catch (err) {
-    // Log any unexpected errors that occur during the fetch process.
     loggingHandler(`FATAL: unexpected error in fetchDataFromWeb - ${err.message}`);
+  }
+}
+
+/**
+ * Executes the array of responses from the fetch requests.
+ * 
+ * @param responses - The results of the fetch requests.
+ */
+function handleResponses(responses: PromiseSettledResult<Response>[]) {
+  for (const response of responses) {
+    if (response.status === "fulfilled") {
+      checkHttpResponse(response.value);
+    }
   }
 }
 
@@ -46,10 +56,9 @@ export async function fetchDataFromWeb(urls: string[]): Promise<void> {
  * @returns A void function; it does not return any value.
  */
 function checkHttpResponse(fulfilledResponses: Response): void {
-  if (fulfilledResponses.status !== 200 || !fulfilledResponses.headers.get("content-type")?.includes("application/json")) {
+  if (fulfilledResponses.status !== HTTP_OK || !fulfilledResponses.headers.get("content-type")?.includes(CONTENT_TYPE_JSON)) {
     return loggingHandler(`ERROR status(${fulfilledResponses.status}) unable to access: ${fulfilledResponses.url}\n`);
   }
-  // If the response is valid, proceed to parse the data.
   parseData(fulfilledResponses);
 }
 

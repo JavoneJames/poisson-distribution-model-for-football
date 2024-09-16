@@ -31,7 +31,7 @@ export type LeagueData = {
 }
 
 // Type representing the standings of a team in the league.
-export type Standing = {
+export type HomeAwayStanding = {
   GP: number  
   W: number   
   D: number   
@@ -40,6 +40,13 @@ export type Standing = {
   GA: number  
   GD: number  
   Pts: number 
+}
+
+export type HomeAwayAnalysis = {
+  AHG: number                        //Average Home Goals
+  AHCG: number                       //Average Home Conceded Goals
+  AS: number                         //Attack Strength
+  DS: number                         //Defensive Strength
 }
 
 // Type representing the possible outcomes of a match.

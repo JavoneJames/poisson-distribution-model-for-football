@@ -18,8 +18,9 @@ async function writeDataToFile(filepath: string, data: Map<string, HomeAwayStand
 }
 
 function serializeData(data: Map<string, HomeAwayStanding> | ExtractedObject) {
-  if (data instanceof Map)
+  if (data instanceof Map) {
     return JSON.stringify(Array.from(data.entries()));
+  }
   return JSON.stringify(data);
 }
 

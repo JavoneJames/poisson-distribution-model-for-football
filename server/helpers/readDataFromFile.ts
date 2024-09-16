@@ -21,9 +21,8 @@ export function readDataFromFile(filePath: string): LeagueData[] {
 
   const arrayOfFilePaths = filePath.split(" ");
   const dataCollection: LeagueData[] = [];
-  
+
   for (const path of arrayOfFilePaths) {
-   
     try {
       const fileContent = Deno.readTextFileSync(path);
       const data = JSON.parse(fileContent) as LeagueData;
@@ -40,9 +39,10 @@ export function readDataFromFile(filePath: string): LeagueData[] {
       // Don't exit here, move to the next path
     }
   }
-  if(dataCollection.length === 0)
+  if (dataCollection.length === 0) {
     throw new Error("Failed to read or parse data from all provided file paths.");
-  return dataCollection
+  }
+  return dataCollection;
 }
 
 const isEmpty = (

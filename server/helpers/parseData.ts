@@ -19,14 +19,14 @@ function extractRelevantData(token: string, fixtures: ParsedJsonFromWeb): void {
   const extractedData = {
     [token]: fixtures
       .filter((fixture) => fixture.HomeTeamScore != null && fixture.AwayTeamScore != null)
-      .map(extract => ({
-        HomeTeam: extract.HomeTeam,            
-        HomeTeamScore: extract.HomeTeamScore as number,  
-        AwayTeam: extract.AwayTeam,            
-        AwayTeamScore: extract.AwayTeamScore as number,  
-      }))
-  }
-  
+      .map((extract) => ({
+        HomeTeam: extract.HomeTeam,
+        HomeTeamScore: extract.HomeTeamScore as number,
+        AwayTeam: extract.AwayTeam,
+        AwayTeamScore: extract.AwayTeamScore as number,
+      })),
+  };
+
   // Call the function to write the extracted data to file.
   writeWebData(token, extractedData);
 }

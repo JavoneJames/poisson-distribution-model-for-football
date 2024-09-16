@@ -14,35 +14,44 @@ import { LeagueData } from "../types/datatypes.d.ts";
  * @throws Will throw an error if the file path is not set in the environment
  *         variable or if there are issues reading or parsing the file.
  */
-export function readDataFromFile(filePath: string): LeagueData[] {
-  if (!filePath) {
-    throw new Error("File path not found in environment variable.");
-  }
 
+export function readDataFromFile(filePath: string): (LeagueData | null)[] {
+  if (isValidPath(filePath)) {
+    loggingHandler(`File path not found in environment variable: ${filePath}`);
+    Deno.exit(1);
+  }
   const arrayOfFilePaths = filePath.split(" ");
-  const dataCollection: LeagueData[] = [];
-
-  for (const path of arrayOfFilePaths) {
-    try {
-      const fileContent = Deno.readTextFileSync(path);
-      const data = JSON.parse(fileContent) as LeagueData;
-
-      if (isEmpty(data)) {
-        loggingHandler(`data is empty for file: ${path}`);
-        continue; // Move to the next file if the data is empty
-      }
-      dataCollection.push(data);
-    } catch (err) {
-      loggingHandler(
-        `Failed to read or parse file: ${path}. Error: ${err.message}`,
-      );
-      // Don't exit here, move to the next path
-    }
-  }
-  if (dataCollection.length === 0) {
-    throw new Error("Failed to read or parse data from all provided file paths.");
-  }
+  const dataCollection: (LeagueData | null)[] = processFiles(arrayOfFilePaths);
   return dataCollection;
+}
+
+function isValidPath(filePath: string) {
+  return typeof filePath !== "string" || filePath.trim() === "";
+}
+
+function processFiles(paths: string[]): (LeagueData | null)[] {
+  const fileContent: (LeagueData | null)[] = paths.map((path) =>
+    readAndParseFile(path)
+  );
+  return fileContent;
+}
+
+function readAndParseFile(path: string): LeagueData | null {
+  try {
+    const fileContent = Deno.readTextFileSync(path);
+    const data = JSON.parse(fileContent) as LeagueData;
+
+    if (isEmpty(data)) {
+      loggingHandler(`Data is empty for file: ${path}`);
+      return null;
+    }
+    return data;
+  } catch (error) {
+    loggingHandler(
+      `Failed to read or parse file: ${path}. Error: ${error.message}`,
+    );
+    return null;
+  }
 }
 
 const isEmpty = (

@@ -51,3 +51,9 @@ export type HomeAwayAnalysis = {
 
 // Type representing the possible outcomes of a match.
 export type Outcome = 'win' | 'loss' | 'draw'
+
+export type LeagueStats = {
+  totalGF: number;
+  totalGA: number;
+  countedTeams: number;
+};

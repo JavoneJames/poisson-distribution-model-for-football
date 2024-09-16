@@ -1,10 +1,10 @@
 import { writeLocalData } from "./helpers/writeDataToFile.ts";
 import { readDataFromFile } from "./helpers/readDataFromFile.ts";
-import { Fixture, HomeAwayStanding, Outcome } from "./types/datatypes.d.ts";
+import { Fixture, HomeAwayStanding, LeagueData, Outcome } from "./types/datatypes.d.ts";
 import { loggingHandler } from "./helpers/loggingHandler.ts";
 
 const FILE_PATH: string = Deno.env.get("READ_EPL_2024")!;
-const DATA = readDataFromFile(FILE_PATH);
+const DATA: (LeagueData | null)[] = readDataFromFile(FILE_PATH);
 
 // Store standings for home teams and away teams
 const storeHomeStanding: Map<string, HomeAwayStanding> = new Map();
@@ -21,10 +21,15 @@ const storeAwayStanding: Map<string, HomeAwayStanding> = new Map();
 async function processFixtures(): Promise<void> {
   let leagueName: string | null = null;
   for (const league of DATA) {
-    for (const [key, fixtures] of Object.entries(league)) {
-      leagueName = key
-      updateStandings(fixtures);
+    if(league !== null){
+      for (const [key, fixtures] of Object.entries(league)) {
+        leagueName = key
+        updateStandings(fixtures);
+      }
     }
+    else{
+      loggingHandler(`League data is null: ${FILE_PATH}`);
+    }    
   }
   leagueName !== null ? await writeStandingsToFile(leagueName) : loggingHandler(`Attempted to write to file for unknown league using following data ${DATA}`)
 }

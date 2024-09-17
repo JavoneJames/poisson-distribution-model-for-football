@@ -15,19 +15,29 @@ const CONTENT_TYPE_JSON = "application/json";
  *
  * @async
  * @function
- * @param {string[]} urls - An array of URLs to fetch data from.
- * @returns {Promise<void>} - A promise that resolves when all fetch operations are settled.
+ * @param urls - A string of URLs to fetch data from.
+ * @returns void Promise - A promise that resolves when all fetch operations are settled.
  * 
  * @throws {Error} If an unexpected error occurs during the fetch process.
  */
-export async function fetchDataFromWeb(urls: string[]): Promise<void> {
+export async function fetchDataFromWeb(urls: string): Promise<void> {
   try {
-    const fetchPromises: Promise<Response>[] = urls.map((url) => fetch(url, { signal: SIGNAL }));
+    const fetchPromises: Promise<Response>[] = createFetchPromises(urls)
     const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(fetchPromises);
     handleResponses(responses);
   } catch (err) {
     loggingHandler(`FATAL: unexpected error in fetchDataFromWeb - ${err.message}`);
   }
+}
+
+/**
+ * Creates an array of fetch promises from the provided URLs.
+ *
+ * @param urls - A string of URLs to fetch.
+ * @returns Promise Response[] An array of promises that represent the fetch requests.
+ */
+function createFetchPromises(urls: string): Promise<Response>[] {
+  return urls.split(" ").map((url) => fetch(url, { signal: SIGNAL }))
 }
 
 /**
@@ -62,6 +72,4 @@ function checkHttpResponse(fulfilledResponses: Response): void {
   parseData(fulfilledResponses);
 }
 
-fetchDataFromWeb([
-  `${Deno.env.get("FETCH_EPL_2024")}`
-])
+fetchDataFromWeb(`${Deno.env.get("FETCH_EPL_2024")}`)

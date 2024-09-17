@@ -8,7 +8,7 @@ import {
 } from "./types/datatypes.d.ts";
 import { loggingHandler } from "./helpers/loggingHandler.ts";
 
-const FILE_PATH: string = Deno.env.get("READ_EPL_2024")!;
+const FILE_PATH: string = Deno.env.get("READ_LEAGUE_DATA_2024")!;
 const DATA: (LeagueData | null)[] = readDataFromFile(FILE_PATH)!;
 
 class GenerateHomeAwayStandings {

@@ -1,230 +1,210 @@
 import { writeParsedData } from "./helpers/writeDataToFile.ts";
 import { readDataFromFile } from "./helpers/readDataFromFile.ts";
-import {
-  Fixture,
-  HomeAwayStanding,
-  LeagueData,
-  Outcome,
-} from "./types/datatypes.d.ts";
 import { loggingHandler } from "./helpers/loggingHandler.ts";
-
-const FILE_PATH: string = Deno.env.get("READ_LEAGUE_DATA_2024")!;
-const DATA: (LeagueData | null)[] = readDataFromFile(FILE_PATH)!;
+import { AllLeagueStandings, ExtractedFixture, HomeAwayStanding, LeagueData } from "./types/datatypes.d.ts";
+import { isAllLeagueStandings, isLeagueData, isOutcome } from "./helpers/checkDataType.ts";
 
 class GenerateHomeAwayStandings {
-  // Store standings for home teams and away teams
-  private storeHomeStanding: Map<string, HomeAwayStanding> = new Map();
-  private storeAwayStanding: Map<string, HomeAwayStanding> = new Map();
 
   /**
+   * Reads league data from a specified file and processes the received data.
    *
-   * This function a particular league data from a file, then calls {@link processLeague} 
-   * to iterate over each fixture to update the standings for home and away games based on the
-   * scores per fixture
-   * After processing, the standings are written to file.
+   * This method attempts to read league data from a file whose path is
+   * specified in the environment variable. If the data is invalid,
+   * an error is logged and the process exits.
    * 
-   * @return void Promise
-   */
-  async processFixtures(): Promise<void> {
-    let leagueName: string = ""
-    for (const league of DATA) {
-      if (league === null) {
-        this.logNullLeagueData();
-        continue; // Skip to the next league
-      }
-      leagueName = this.processLeague(league);
-    }
-    await this.writeStandings(leagueName);
-  }
-
-  /**
-   * Logs an error if the league data is null.
-   * 
-   * @private
-   * @return void
-   */
-  private logNullLeagueData(): void {
-    loggingHandler(`League data is null: ${FILE_PATH}`);
-  }
-
-  /**
-   * Gets a league's fixtures then calls {@link updateStandings} to updates the standings.
-   * 
-   * @private
-   * @param league - The league data containing match fixtures.
-   * @returns leagueName - The name of the league being processed.
-   */
-  private processLeague(league: LeagueData): string {
-    let leagueName: string = ''; // Initialize leagueName
-  
-    for (const [key, fixtures] of Object.entries(league)) {
-      leagueName = key; // Capture the league name
-      this.updateStandings(fixtures);
-    }
-    return leagueName; 
-  }
-  
-
- /**
-   * Writes the standings to file.
-   * 
-   * @private
    * @async
-   * @param leagueName - The league name, used to generate file names.
-   * @returns void Promise - Resolves after standings are written to file.
+   * @returns void Promise Resolves when the data is successfully read and processed.
+   * @throws error If there is an error reading the file or processing the data.
    */
-  private async writeStandings(leagueName: string): Promise<void> {
-      try {
-        await this.writeStandingsToFile(leagueName);
-      } catch (error) {
-        loggingHandler(`Attempted to write to file using following data: ${leagueName} ${error}`)
+  async readLeagueData(): Promise<void> {
+    try {
+      const FILE_PATH: string = Deno.env.get("READ_LEAGUE_DATA_2024")!;
+      const DATA: (LeagueData | AllLeagueStandings)[] = await readDataFromFile(FILE_PATH);
+      
+      if (!isAllLeagueStandings(DATA)) {
+        loggingHandler(`Invalid data format: ${DATA}`);
+        Deno.exit(1);
       }
+      await this.processReceivedData(DATA);
+    } catch (error) {
+      loggingHandler(`Error reading league data: ${error.message}`);
+    }
   }
 
   /**
-   * Updates the standings for both home and away teams based on match results.
-   * 
-   * @private
-   * @param fixtures - An array of fixture objects to process.
+   * Processes the received league data.
+   *
+   * This method takes an array of league data and processes each league
+   * concurrently using the processLeague method.
+   *
+   * @async
+   * @param {Array<LeagueData | AllLeagueStandings>} DATA - The array of league data to process.
+   * @returns {Promise<void>} Resolves when all leagues have been processed.
+   * @throws {Error} If there is an error processing the leagues.
    */
-  private updateStandings(fixtures: Fixture[]): void {
-    fixtures.forEach((fixture) => {
-      this.updateTeamStanding(
-        this.storeHomeStanding,
-        fixture.HomeTeam,
-        fixture.HomeTeamScore,
-        fixture.AwayTeamScore,
-      );
-      this.updateTeamStanding(
-        this.storeAwayStanding,
-        fixture.AwayTeam,
-        fixture.AwayTeamScore,
-        fixture.HomeTeamScore,
-      );
-    });
+  private async processReceivedData(DATA: (LeagueData | AllLeagueStandings)[]): Promise<void> {
+    try {
+      const leaguePromises = DATA.map((leagues) => this.processLeague(leagues));
+      await Promise.all(leaguePromises);
+    } catch (error) {
+      loggingHandler(`Error processing leagues: ${error}`);
+    }
   }
 
    /**
-   * Writes the home and away standings to file.
-   * 
+   * Processes a single league's data.
+   *
+   * This method updates the home and away standings based on the fixtures
+   * from the league and saves the standings to a file.
+   *
    * @async
-   * @private
-   * @param league - The league name used for file naming.
-   * @returns void Promise - Resolves when the standings are written.
+   * @param LeagueData | AllLeagueStandings - The league data to process.
+   * @returns void Promise Resolves when the standings are saved to file.
    */
-  private async writeStandingsToFile(league: string): Promise<void> {
-    await Promise.all([
-      writeParsedData(league, "homeStanding", this.storeHomeStanding),
-      writeParsedData(league, "awayStanding", this.storeAwayStanding)
-    ]);
-  }
-
-   /**
-   * Updates the standing for a specified team based on the match results.
-   *
-   * This function checks if the team already exists in the standings map. If the
-   * team exists, it updates the existing standing with the new match results.
-   * If the team does not exist, it creates a new standing entry for the team.
-   *
-   * @private
-   * @param standings - A Map that stores the standings of teams.
-   * @param team - The name of the team to be updated.
-   * @param teamScore - The score achieved by the team in the match.
-   * @param opponentScore - The score achieved by the opponent team.
-   */
-  private updateTeamStanding(
-    standings: Map<string, HomeAwayStanding>,
-    team: string,
-    teamScore: number,
-    opponentScore: number,
-  ): void {
-    const doesTeamExists = standings.get(team);
-    const outcome = this.determineOutcome(teamScore, opponentScore);
-    if (doesTeamExists) {
-      this.updateExistingStanding(
-        doesTeamExists,
-        teamScore,
-        opponentScore,
-        outcome,
-      );
-    } else {
-      standings.set(
-        team,
-        this.createNewStanding(teamScore, opponentScore, outcome),
-      );
+  private async processLeague(leagues: LeagueData | AllLeagueStandings) {
+    const homeStandings = new Map<string, HomeAwayStanding>();
+    const awayStandings = new Map<string, HomeAwayStanding>();
+    
+    if (isLeagueData(leagues)) {
+      for (const league in leagues) {
+        const fixtures = leagues[league];
+        this.processFixtures(fixtures, homeStandings, awayStandings);
+        await this.saveStandingsToFile(league, homeStandings, awayStandings)
+        homeStandings.clear()
+        awayStandings.clear()
+      }
     }
   }
 
   /**
-   * Determines the outcome of a match based on the scores of the two teams.
+   * Saves the standings to a file.
    *
-   * This function compares the scores of two teams and returns the outcome as
-   * either 'win', 'loss', or 'draw'.
+   * This method writes both home and away standings to their respective files.
    *
-   * @private
-   * @param score1 - The score of the first team.
-   * @param score2 - The score of the second team.
-   * @returns Outcome - of the match as an Outcome type ('win', 'loss', or 'draw').
+   * @async
+   * @param {string} leagueName - The name of the league for which standings are being saved.
+   * @param {Map<string, HomeAwayStanding>} homeStandings - The home standings to save.
+   * @param {Map<string, HomeAwayStanding>} awayStandings - The away standings to save.
+   * @returns {Promise<void>} Resolves when the standings are written to the files.
+   * @throws If there is an error writing the standings to file.
    */
-  private determineOutcome(score1: number, score2: number): Outcome {
-    return score1 > score2 ? "win" : score1 < score2 ? "loss" : "draw";
+  private async saveStandingsToFile(leagueName: string, homeStandings: Map<string, HomeAwayStanding>, awayStandings: Map<string, HomeAwayStanding>) {
+    try {
+      await Promise.all([
+        writeParsedData(leagueName, "homeStanding", homeStandings),
+        writeParsedData(leagueName, "awayStanding", awayStandings),
+      ]);
+    } catch (error) {
+      loggingHandler(`Error writing standings to file: ${error}`);
+    }
   }
 
   /**
-   * Creates a new standing entry for a team based on the match results.
+   * Processes fixtures to update standings.
    *
-   * @private
-   * @param teamScore - The score achieved by the team.
-   * @param opponentScore - The score achieved by the opponent team.
-   * @param Outcome - The outcome of the match ('win', 'loss', or 'draw').
-   * @returns HomeAwayStanding - A new standing object representing the team's performance.
+   * This method iterates through the fixtures, updating the home and away
+   * standings based on the scores of each match.
+   *
+   * @param {ExtractedFixture[]} fixtures - The list of fixtures to process.
+   * @param {Map<string, HomeAwayStanding>} homeStandings - The map to update for home standings.
+   * @param {Map<string, HomeAwayStanding>} awayStandings - The map to update for away standings.
    */
-  private createNewStanding(
-    teamScore: number,
-    opponentScore: number,
-    outcome: Outcome,
-  ): HomeAwayStanding {
-    return {
-      GP: 1, // Games Played
-      W: outcome === "win" ? 1 : 0, // Wins
-      D: outcome === "draw" ? 1 : 0, // Draws
-      L: outcome === "loss" ? 1 : 0, // Losses
-      GF: teamScore, // Goals For
-      GA: opponentScore, // Goals Against
-      GD: teamScore - opponentScore, // Goal Difference
-      Pts: outcome === "win" ? 3 : outcome === "draw" ? 1 : 0, // Points
-    };
+  private processFixtures(fixtures: ExtractedFixture[], homeStandings: Map<string, HomeAwayStanding>, awayStandings: Map<string, HomeAwayStanding>) {
+      for (const fixture of fixtures) {
+        this.updateTeamStandings(fixture.HomeTeam, fixture.HomeTeamScore, fixture.AwayTeamScore, homeStandings);
+        this.updateTeamStandings(fixture.AwayTeam, fixture.AwayTeamScore, fixture.HomeTeamScore, awayStandings);
+      }
   }
 
   /**
-   * Updates an existing standing entry for a team based on the match results.
+   * Updates the standings for a specific team.
    *
-   * @private
-   * @param team - The existing standing for the team to be updated.
-   * @param teamScore - The score achieved by the team.
-   * @param opponentScore - The score achieved by the opponent team.
-   * @param Outcome - of the match ('win', 'loss', or 'draw').
+   * This method checks if the team already exists in the standings and updates them
+   * accordingly. If not, it creates new standings for the team.
+   *
+   * @param {string} team - The name of the team to update standings for.
+   * @param {number} teamScore - The score of the team.
+   * @param {number} opponentScore - The score of the opponent team.
+   * @param {Map<string, HomeAwayStanding>} standings - The standings map to update.
+   * @returns {void}
+   * @throws If there is an error updating the standings.
    */
-  private updateExistingStanding(
-    team: HomeAwayStanding,
-    teamScore: number,
-    opponentScore: number,
-    outcome: Outcome,
-  ): void {
-    team.GP += 1; // Increment Games Played
-    team.GF += teamScore; // Increment Goals For
-    team.GA += opponentScore; // Increment Goals Against
-    team.GD += teamScore - opponentScore; // Update Goal Difference
+  private updateTeamStandings(team: string, teamScore: number, opponentScore: number, standings: Map<string, HomeAwayStanding>) {
+    try {
+      const doesTeamExist = standings.get(team);
+      const outcome = this.determineOutcome(teamScore, opponentScore);
+      if (doesTeamExist) {
+        this.updateExistingStanding(doesTeamExist, teamScore, opponentScore, outcome);
+      } else {
+        standings.set(team, this.createNewStanding(teamScore, opponentScore, outcome));
+      }
+    } catch (error) {
+      loggingHandler(`Caught error: ${error}`);
+    }
+  }
 
-    if (outcome === "win") {
-      team.W += 1; // Increment Wins
-      team.Pts += 3; // Add 3 points for a win
+   /**
+   * Determines the outcome of a match based on scores.
+   *
+   * @param {number} teamScore - The score of the team.
+   * @param {number} opponentScore - The score of the opponent.
+   * @returns {string} The outcome of the match ("win", "lose", "draw").
+   */
+  private determineOutcome(teamScore: number, opponentScore: number) {
+    return teamScore > opponentScore ? "win" : teamScore < opponentScore ? "lose" : "draw";
+  }
+
+  /**
+   * Updates an existing team's standings based on match results.
+   *
+   * This method modifies the team's standing according to the match outcome,
+   * including goals for, goals against, points, and match results.
+   *
+   * @param {HomeAwayStanding} team - The current standings of the team.
+   * @param {number} teamScore - The score of the team in the match.
+   * @param {number} opponentScore - The score of the opposing team in the match.
+   * @param {string} outcome - The outcome of the match ("win", "draw", "lose").
+   * @returns {void}
+   * @throws {Error} If the outcome is invalid.
+   */
+  private updateExistingStanding(team: HomeAwayStanding, teamScore: number, opponentScore: number, outcome: string) {
+    team.GP += 1;
+    team.GF += teamScore;
+    team.GA += opponentScore;
+    team.GD += teamScore - opponentScore;
+    if (!isOutcome) {
+      throw new Error("Invalid outcome signature caught");
+    } else if (outcome === "win") {
+      team.W += 1;
+      team.Pts += 3;
     } else if (outcome === "draw") {
-      team.D += 1; // Increment Draws
-      team.Pts += 1; // Add 1 point for a draw
-    } else if (outcome === "loss") {
-      team.L += 1; // Increment Losses
+      team.D += 1;
+      team.Pts += 1;
+    } else if (outcome === "lose") {
+      team.L += 1;
     }
+  }
+  
+  /**
+   * Creates a new standing for a team based on match results.
+   *
+   * @param {number} teamScore - The score of the team in the match.
+   * @param {number} opponentScore - The score of the opposing team in the match.
+   * @param {string} outcome - The outcome of the match ("win", "draw", "lose").
+   * @returns {HomeAwayStanding} The new standing for the team.
+   */
+  private createNewStanding(teamScore: number, opponentScore: number, outcome: string): HomeAwayStanding {
+    return {
+      GP: 1,
+      W: outcome === "win" ? 1 : 0,
+      D: outcome === "draw" ? 1 : 0,
+      L: outcome === "lose" ? 1 : 0,
+      GF: teamScore,
+      GA: opponentScore,
+      GD: teamScore - opponentScore,
+      Pts: outcome === "win" ? 3 : outcome === "draw" ? 1 : 0,
+    };
   }
 }
 

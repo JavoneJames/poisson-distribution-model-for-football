@@ -1,6 +1,7 @@
-import { loggingHandler } from "./loggingHandler.ts";
-import { ParsedJsonFromWeb, LeagueData } from "../types/datatypes.d.ts";
 import { writeWebData } from "./writeDataToFile.ts";
+import { loggingHandler } from "./loggingHandler.ts";
+import { LeagueData, ParsedJsonFromWeb } from "../types/datatypes.d.ts";
+import { isParsedJsonFromWeb } from "./checkDataType.ts";
 
 /**
  * Parses JSON data from an HTTP response and stores extracted information.
@@ -14,19 +15,23 @@ export async function parseData(settledResponses: Response): Promise<void> {
   const token: string = getTokenFromUrl(settledResponses);
   try {
     const fixtures: ParsedJsonFromWeb = await settledResponses.json();
-    const extractedData = extractRelevantData(token, fixtures);
-    writeWebData(token, extractedData);
+    const extractedData: LeagueData = extractRelevantData(token, fixtures);
+    await writeWebData(token, extractedData);
   } catch (err) {
     loggingHandler(`ERROR: Unable to read content body from: ${settledResponses.url} - ${err.message}`);
+    throw err;
   }
 }
 
 /**
  * Extracts the token from the given URL.
- * 
- * @function extractRelevantData - uses it to create league key 
- * @function writeParsedData - uses it to create file to write generated data
- * @function getLocalFilePath - uses it to create file to write generated data
+ *
+ * {@link extractRelevantData} - uses it to create league key
+ *
+ * {@link ./server/helpers/writeDataToFile.ts#writeParsedData}  - uses it to create file to write generated data
+ *
+ * {@link getLocalFilePath} - uses it to create file to write generated data
+ *
  * @param url - The URL from which to extract the token.
  * @returns The extracted token as a string.
  */
@@ -36,17 +41,25 @@ function getTokenFromUrl(settledResponses: Response): string {
 
 /**
  * Step 1 - Filter the fixtures to include only those that have been played.
- * 
+ *
  * Step 2 - Extracts relevant data from the parsed fixtures.
- * 
+ *
  * @param token - The unique token to associate with the data.
  * @param fixtures - The parsed JSON data representing match details.
  * @returns An object containing the extracted data.
  */
 function extractRelevantData(token: string, fixtures: ParsedJsonFromWeb): LeagueData {
+  if (!isParsedJsonFromWeb(fixtures)) {
+    throw new Error(`Invalid fixtures data structure in func extractedData`);
+  }
   const extractedData = {
     [token]: fixtures
-      .filter((fixture) => fixture.HomeTeamScore != null && fixture.AwayTeamScore != null)
+      .filter((fixture) => {
+        return (fixture.HomeTeamScore !== null &&
+          fixture.AwayTeamScore !== null &&
+          typeof fixture.HomeTeamScore === "number" &&
+          typeof fixture.AwayTeamScore === "number");
+      })
       .map((extract) => ({
         HomeTeam: extract.HomeTeam,
         HomeTeamScore: extract.HomeTeamScore as number,
@@ -54,5 +67,5 @@ function extractRelevantData(token: string, fixtures: ParsedJsonFromWeb): League
         AwayTeamScore: extract.AwayTeamScore as number,
       })),
   };
-  return extractedData
+  return extractedData;
 }

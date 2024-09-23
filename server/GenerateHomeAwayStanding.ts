@@ -207,6 +207,3 @@ class GenerateHomeAwayStandings {
     };
   }
 }
-
-const standings = new GenerateHomeAwayStandings();
-await standings.processFixtures();

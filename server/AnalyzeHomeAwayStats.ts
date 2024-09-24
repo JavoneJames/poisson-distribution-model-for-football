@@ -1,6 +1,6 @@
 import { writeParsedData } from "./helpers/writeDataToFile.ts";
 import { readDataFromFile } from "./helpers/readDataFromFile.ts";
-import { AllLeagueStandings, ExtractedFixture, HomeAwayAnalysis, HomeAwayStanding, LeagueData, LeagueStats, TeamEntry } from "./types/datatypes.d.ts";
+import { AllLeagueStandings, ExtractedFixture, HomeAwayAnalysis, HomeAwayStanding, LeagueData, LeagueStats } from "./types/datatypes.d.ts";
 import { loggingHandler } from "./helpers/loggingHandler.ts";
 import { isHomeAwayStanding, isTeamEntry } from "./helpers/checkDataType.ts";
 

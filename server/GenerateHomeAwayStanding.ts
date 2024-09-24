@@ -1,7 +1,7 @@
 import { writeParsedData } from "./helpers/writeDataToFile.ts";
 import { readDataFromFile } from "./helpers/readDataFromFile.ts";
 import { loggingHandler } from "./helpers/loggingHandler.ts";
-import { AllLeagueStandings, ExtractedFixture, HomeAwayStanding, LeagueData } from "./types/datatypes.d.ts";
+import { AllLeagueStandings, ExtractedFixture, HomeAwayStanding, LeagueData, Outcome } from "./types/datatypes.d.ts";
 import { isAllLeagueStandings, isLeagueData, isOutcome } from "./helpers/checkDataType.ts";
 
 class GenerateHomeAwayStandings {
@@ -23,12 +23,12 @@ class GenerateHomeAwayStandings {
       const DATA: (LeagueData | AllLeagueStandings)[] = await readDataFromFile(FILE_PATH);
       
       if (!isAllLeagueStandings(DATA)) {
-        loggingHandler(`Invalid data format: ${DATA}`);
+        loggingHandler(`CRITICAL: invalid data format: ${DATA}`);
         Deno.exit(1);
       }
       await this.processReceivedData(DATA);
     } catch (error) {
-      loggingHandler(`Error reading league data: ${error.message}`);
+      loggingHandler(`ERROR: reading league data: ${error.message}`);
     }
   }
 
@@ -62,17 +62,16 @@ class GenerateHomeAwayStandings {
    * @param LeagueData | AllLeagueStandings - The league data to process.
    * @returns void Promise Resolves when the standings are saved to file.
    */
-  private async processLeague(leagues: LeagueData | AllLeagueStandings) {
-    const homeStandings = new Map<string, HomeAwayStanding>();
-    const awayStandings = new Map<string, HomeAwayStanding>();
+  private async processLeague(leagues: LeagueData | AllLeagueStandings): Promise<void> {
     
     if (isLeagueData(leagues)) {
-      for (const league in leagues) {
-        const fixtures = leagues[league];
+      for (const [league, fixtures] of Object.entries(leagues)) {
+        const homeStandings = new Map<string, HomeAwayStanding>();
+        const awayStandings = new Map<string, HomeAwayStanding>();
+
         this.processFixtures(fixtures, homeStandings, awayStandings);
+
         await this.saveStandingsToFile(league, homeStandings, awayStandings)
-        homeStandings.clear()
-        awayStandings.clear()
       }
     }
   }
@@ -96,7 +95,7 @@ class GenerateHomeAwayStandings {
         writeParsedData(leagueName, "awayStanding", awayStandings),
       ]);
     } catch (error) {
-      loggingHandler(`Error writing standings to file: ${error}`);
+      loggingHandler(`ERROR writing standings to file: ${error}`);
     }
   }
 
@@ -134,13 +133,13 @@ class GenerateHomeAwayStandings {
     try {
       const doesTeamExist = standings.get(team);
       const outcome = this.determineOutcome(teamScore, opponentScore);
-      if (doesTeamExist) {
-        this.updateExistingStanding(doesTeamExist, teamScore, opponentScore, outcome);
-      } else {
+      if(!doesTeamExist){
         standings.set(team, this.createNewStanding(teamScore, opponentScore, outcome));
+        return
       }
+      this.updateExistingStanding(doesTeamExist, teamScore, opponentScore, outcome);
     } catch (error) {
-      loggingHandler(`Caught error: ${error}`);
+      loggingHandler(`ERROR: ${error} cannot update/insert data for ${team}`);
     }
   }
 
@@ -152,7 +151,7 @@ class GenerateHomeAwayStandings {
    * @returns {string} The outcome of the match ("win", "lose", "draw").
    */
   private determineOutcome(teamScore: number, opponentScore: number) {
-    return teamScore > opponentScore ? "win" : teamScore < opponentScore ? "lose" : "draw";
+    return teamScore > opponentScore ? "win" : teamScore < opponentScore ? "loss" : "draw";
   }
 
   /**
@@ -168,20 +167,20 @@ class GenerateHomeAwayStandings {
    * @returns {void}
    * @throws {Error} If the outcome is invalid.
    */
-  private updateExistingStanding(team: HomeAwayStanding, teamScore: number, opponentScore: number, outcome: string) {
+  private updateExistingStanding(team: HomeAwayStanding, teamScore: number, opponentScore: number, outcome: Outcome) {
     team.GP += 1;
     team.GF += teamScore;
     team.GA += opponentScore;
     team.GD += teamScore - opponentScore;
     if (!isOutcome) {
-      throw new Error("Invalid outcome signature caught");
+      throw new Error(`ERROR: invalid outcome signature caught trying to update data for ${team}`);
     } else if (outcome === "win") {
       team.W += 1;
       team.Pts += 3;
     } else if (outcome === "draw") {
       team.D += 1;
       team.Pts += 1;
-    } else if (outcome === "lose") {
+    } else if (outcome === "loss") {
       team.L += 1;
     }
   }
@@ -194,12 +193,12 @@ class GenerateHomeAwayStandings {
    * @param {string} outcome - The outcome of the match ("win", "draw", "lose").
    * @returns {HomeAwayStanding} The new standing for the team.
    */
-  private createNewStanding(teamScore: number, opponentScore: number, outcome: string): HomeAwayStanding {
+  private createNewStanding(teamScore: number, opponentScore: number, outcome: Outcome): HomeAwayStanding {
     return {
       GP: 1,
       W: outcome === "win" ? 1 : 0,
       D: outcome === "draw" ? 1 : 0,
-      L: outcome === "lose" ? 1 : 0,
+      L: outcome === "loss" ? 1 : 0,
       GF: teamScore,
       GA: opponentScore,
       GD: teamScore - opponentScore,

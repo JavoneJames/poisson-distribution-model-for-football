@@ -12,7 +12,7 @@ class FetchDataFromWeb {
     const urls = Deno.env.get("FETCH_EPL_2024");
 
     if (!urls) {
-      loggingHandler("No URLs found in the environment variable ");
+      loggingHandler("CRITICAL: no URLs found in the environment variable ");
       Deno.exit(1);
     }
 
@@ -21,7 +21,7 @@ class FetchDataFromWeb {
       const responses: PromiseSettledResult<Response>[] = await Promise.allSettled(fetchPromises);
       await this.handleResponses(responses);
     } catch (error) {
-      loggingHandler(`Fetch failed: ${error.message}`);
+      loggingHandler(`ERROR: fetch failed: ${error.message}`);
     }
   }
 
@@ -45,7 +45,7 @@ class FetchDataFromWeb {
       if (response.status === "fulfilled") {
         this.checkHttpResponse(response.value);
       } else {
-        loggingHandler(`Failed to fetch: ${response.reason}`);
+        loggingHandler(`WARNING: failed to fetch: ${response.reason}`);
       }
     });
     await Promise.all(promises);
@@ -62,7 +62,7 @@ class FetchDataFromWeb {
     const HTTP_OK = 200;
     const CONTENT_TYPE_JSON = "application/json";
     if (fulfilledResponses.status !== HTTP_OK || !fulfilledResponses.headers.get("content-type")?.includes(CONTENT_TYPE_JSON)) {
-      return loggingHandler(`ERROR status(${fulfilledResponses.status}) unable to access: ${fulfilledResponses.url}\n`);
+      return loggingHandler(`ERROR: status(${fulfilledResponses.status}) unable to access: ${fulfilledResponses.url}\n`);
     }
     await this.parseData(fulfilledResponses);
   }
@@ -82,7 +82,7 @@ class FetchDataFromWeb {
       const extractedData: LeagueData = this.extractRelevantData(token, fixtures);
       await writeWebData(token, extractedData);
     } catch (err) {
-      loggingHandler(`ERROR: Unable to read content body from: ${settledResponses.url} - ${err.message}`);
+      loggingHandler(`ERROR: unable to read content body from: ${settledResponses.url} - ${err.message}`);
       throw err;
     }
   }
@@ -114,7 +114,7 @@ class FetchDataFromWeb {
    */
   private extractRelevantData(token: string, fixtures: ParsedJsonFromWeb): LeagueData {
     if (!isParsedJsonFromWeb(fixtures)) {
-      throw new Error(`Invalid fixtures data structure in func extractedData`);
+      throw new Error(`DEBUG: invalid fixtures data structure in func extractedData`);
     }
     const extractedData = {
       [token]: fixtures

@@ -1,6 +1,6 @@
 import { writeParsedData } from "./helpers/writeDataToFile.ts";
 import { readDataFromFile } from "./helpers/readDataFromFile.ts";
-import { AllLeagueStandings, ExtractedFixture, HomeAwayAnalysis, HomeAwayStanding, LeagueData, LeagueStats } from "./types/datatypes.d.ts";
+import { AllLeagueStandings, ExtractedFixture, HomeAwayAnalysis, HomeAwayStanding, LeagueData, LeagueStats, TeamEntry } from "./types/datatypes.d.ts";
 import { loggingHandler } from "./helpers/loggingHandler.ts";
 import { isHomeAwayStanding, isTeamEntry } from "./helpers/checkDataType.ts";
 
@@ -14,15 +14,13 @@ class AnalyzeHomeAwayStats {
       const AWAY_STANDINGS_FILE_PATH = Deno.env.get("READ_AWAY_STANDINGS_2024");
 
       if (!HOME_STANDINGS_FILE_PATH || !AWAY_STANDINGS_FILE_PATH) {
-        loggingHandler("Error: One or both standings file paths not set.");
-        return;
+        throw new Error("Error: One or both standings file paths not set.");
       }
 
       const { homeLeague, awayLeague } = this.extractLeagueIdentifier(HOME_STANDINGS_FILE_PATH, AWAY_STANDINGS_FILE_PATH);
 
       if (!homeLeague || !awayLeague) {
-        loggingHandler("Error: One or both standings file paths not set.");
-        return;
+        throw new Error("Error: One or both standings file paths not set.");
       }
 
       // Read data from files concurrently
@@ -54,23 +52,24 @@ class AnalyzeHomeAwayStats {
    * @param type The type of fixtures ("home" or "away").
    */
   private async processReceivedData(standings: (LeagueData | AllLeagueStandings)[], league: RegExpMatchArray, type: "home" | "away"): Promise<void> {
-    if (!standings.length) {
-      loggingHandler(`No standings data found for ${type} fixtures.`);
-      return;
+    if (standings.length === 0) {
+      loggingHandler(`No standings data found for ${type} fixtures in league ${league}`);
+      return
     }
-    const leagueStatistics = this.initializeLeagueStatistics();
-    const storeAnalysis = new Map<string, HomeAwayAnalysis>();
-
-    const arrayOfPromises = standings.map((fixtures, index) => {
+   
+    const promises = standings.map((fixtures, index) => {
+      const leagueStatistics = this.initializeLeagueStatistics();
+      const storeAnalysis = new Map<string, HomeAwayAnalysis>();
+  
       this.processFixtureStats(leagueStatistics, fixtures, storeAnalysis);
+      
       const currentLeague = league[index];
       if (currentLeague) {
-        this.saveStandingsToFile(new Map(storeAnalysis), currentLeague, type);
+        return this.saveStandingsToFile(storeAnalysis, currentLeague, type);
       }
-      this.resetAnalysis(storeAnalysis, leagueStatistics);
     });
 
-    await Promise.all(arrayOfPromises);
+    await Promise.all(promises)
   }
 
    /**
@@ -97,17 +96,6 @@ class AnalyzeHomeAwayStats {
   private processFixtureStats(leagueStatistics: LeagueStats, fixtures: LeagueData | AllLeagueStandings, storeAnalysis: Map<string, HomeAwayAnalysis>) {
     this.collectLeagueStats(leagueStatistics, fixtures);
     this.extractRelevantData(leagueStatistics, fixtures, storeAnalysis);
-  }
-
-  /**
-   * Resets the analysis data for the next set of fixtures.
-   * @param storeAnalysis The analysis map to reset.
-   * @param leagueStatistics The league statistics object to reset.
-   */
-  private resetAnalysis(storeHomeAnalysis: Map<string, HomeAwayAnalysis>, leagueHomeStatistics: LeagueStats) {
-    storeHomeAnalysis.clear();
-    leagueHomeStatistics.totalGF = 0;
-    leagueHomeStatistics.totalGA = 0;
   }
 
   /**

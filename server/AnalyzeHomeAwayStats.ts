@@ -128,8 +128,8 @@ class AnalyzeHomeAwayStats {
     const AHG = goalsFor > 0 ? goalsFor / gamesPlayed : 0;
     const AHCG = goalsAgainst > 0 ? goalsAgainst / gamesPlayed : 0;
 
-    const AS = leagueStatistics.totalGF && stats.GF > 0 ? leagueStatistics.totalGF / stats.GF : 0;
-    const DS = leagueStatistics.totalGA && stats.GA > 0 ? leagueStatistics.totalGA / stats.GA : 0;
+    const AS = leagueStatistics.totalGF && stats.GF > 0 ? AHG / leagueStatistics.totalGF : 0;
+    const DS = leagueStatistics.totalGA && stats.GA > 0 ? AHCG / leagueStatistics.totalGA : 0;
 
     storeAnalysis.set(team, { AHG, AHCG, AS, DS });
   }
